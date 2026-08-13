@@ -1,6 +1,7 @@
 import streamlit as st
+import time
 from services.config.workout_config import METRICS_FIELDS
-
+from services.persistence.exercise_repository import add_exercise
 
 def  sync_metrics_update(context):
     if not context or not hasattr(context,"state") or not context.state.playing:

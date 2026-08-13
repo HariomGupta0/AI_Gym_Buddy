@@ -50,8 +50,13 @@ class SquatDetector(BaseExercise):
             self.get_point(landmarks, knee_idx)
         )
 
-        key_landmark_visible = landmarks[hip_idx].visibility >= self.MIN_VISIBILITY and landmarks[knee_idx].visibility >= self.MIN_VISIBILITY and landmarks
-        [ankle_idx].visibility >= self.MIN_VISIBILITY
+        
+        key_landmark_visible = (
+            landmarks[hip_idx].visibility >= self.MIN_VISIBILITY 
+            and landmarks[knee_idx].visibility >= self.MIN_VISIBILITY 
+            and landmarks[ankle_idx].visibility >= self.MIN_VISIBILITY
+        )
+
 
         if key_landmark_visible:
             if knee_angle < self.DOWN_THRESHOLD:

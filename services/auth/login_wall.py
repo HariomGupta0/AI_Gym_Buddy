@@ -13,17 +13,17 @@ def render_login_wall():
         submit_button = st.form_submit_button("Start Session", width="stretch")
 
     if submit_button:
-            if not username:
-                st.error("Name cannot be empty:")
-                return False
+        if not username:
+            st.error("Name cannot be empty:")
+            return False
 
-            #This is done just after setting up db
-            user = get_or_create_user(username)
+        #This is done just after setting up db
+        user = get_or_create_user(username)
 
-            st.session_state["user_id"] = user["id"]
-            st.session_state["username"] = user["username"]
+        st.session_state["user_id"] = user["id"]
+        st.session_state["username"] = user["username"]
 
-            st.rerun()
+        st.rerun()
 
     return False
 

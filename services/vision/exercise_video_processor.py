@@ -33,7 +33,6 @@ class VideoProcessorClass(VideoProcessorBase):
             output_segmentation_masks=False
         )
 
-        #Landmarker = is a ml tool which tracks 3d points in head ,face and body
         self._landmarker = vision.PoseLandmarker.create_from_options(options)
 
         self._detectors = {
@@ -190,7 +189,6 @@ class VideoProcessorClass(VideoProcessorBase):
         )
 
     def recv(self, frame):
-        #This line prepares the camera frame.
         image = np.asarray(
             cv2.flip(frame.to_ndarray(format="bgr24"), 1),
             dtype=np.uint8
@@ -216,19 +214,11 @@ class VideoProcessorClass(VideoProcessorBase):
             if detector:
                 metrics = detector.process(landmarks)
 
-                metrics["pose_detected"] = True
-
                 self._draw_overlays(image, metrics, ex_type)
 
                 self.set_latest_metrics(metrics)
         else:
             self._draw_no_pose_warnings(image)
-            
-            with self._lock:
-                if self._latest_metrics is not None:
-                    self._latest_metrics["pose_detected"] = False
-                else:
-                    self._latest_metrics = {"pose_detected": False}
 
         return av.VideoFrame.from_ndarray(image, format="bgr24")
     

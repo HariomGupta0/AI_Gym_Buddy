@@ -6,7 +6,7 @@ class BaseExercise(ABC):
         self.reps = 0
         self.stage = None
 
-    def calculate__angle(self, a,b,c):
+    def calculate_angle(self, a,b,c):
         ax,ay = a[0] - b[0], a[1] - b[1]
         cx, cy = c[0] - b[0], c[1] - b[1]
 
