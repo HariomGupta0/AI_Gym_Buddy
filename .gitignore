@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Sensitive data (like API keys)
+.env
+
+# SQLite Database
+data.db
+
+# OS files
+.DS_Store
+Thumbs.db

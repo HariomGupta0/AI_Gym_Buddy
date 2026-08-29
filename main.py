@@ -1,6 +1,7 @@
 import streamlit as st 
 import os 
 import time
+import pandas as pd
 from services.auth.login_wall import render_login_wall
 from services.state.session_defaults import initial_session_defaults
 from services.config.workout_config import EXERCISE_OPTION
@@ -9,7 +10,11 @@ from services.persistence.exercise_repository import init_db
 from streamlit_webrtc import webrtc_streamer, WebRtcMode
 from services.vision.exercise_video_processor import VideoProcessorClass
 from services.tracking.metrics import sync_metrics_update
-
+from groq import Groq
+from services.persistence.exercise_repository import get_users_exercises
+from services.coaching.llm import LLMCoach
+from services.coaching.tts import TextToSpeech
+from services.coaching.voice_pipeline import VoicePipeline, autoplay_audio
 
 def main():
     st.set_page_config(
@@ -28,6 +33,20 @@ def main():
         return
 
     initial_session_defaults()
+
+    if "voice_pipeline" not in st.session_state:
+        try:
+            api_key = os.environ.get("GROQ_API_KEY", "")
+
+            if not api_key and hasattr(st, "secrets") and "GROQ_API_KEY" in st.secrets:
+                api_key = st.secrets["GROQ_API_KEY"]
+            
+            groq_client = Groq(api_key=api_key)
+            llm_coach = LLMCoach(groq_client)
+            tts = TextToSpeech()
+            st.session_state.voice_pipeline = VoicePipeline(llm_coach, tts)
+        except Exception as e:
+            st.session_state.voice_pipeline = None
 
     workout_started = st.session_state.get("workout_started",False)
 
@@ -64,8 +83,20 @@ def main():
                 st.session_state.last_notified_workout_complete = False
                 st.rerun()
 
-                st.rerun()
+                if st.session_state.voice_pipeline:
+                    result = st.session_state.voice_pipeline.process_event(
+                        event="workout_started",
+                        exercise=plan_exercise,
+                        metrics={}
+                    )
+                    
+                    if result:
+                        st.session_state.audio_to_play, st.session_state.coach_feedback = result
 
+                st.session_state.last_notified_sets_completed = 0
+                st.session_state.last_notified_workout_complete = False
+                st.rerun()
+            
         else:
             exercise = st.session_state.get("plan_exercise")
             sets = st.session_state.get("plan_sets")
@@ -82,10 +113,10 @@ def main():
         if  workout_started:
             st.divider()
 
-            exercise = st.session_state.get("plan_exercise")
+            exercise = st.session_state.get("exercise_type")
             total_reps = st.session_state.get("reps")
             current_set_reps = st.session_state.get("current_set_reps")
-            reps_per_set = st.session_state.get("plan_reps")
+            reps_per_set = st.session_state.get("reps_per_set")
             sets_completed = st.session_state.get("sets_completed")
             target_sets = st.session_state.get("plan_sets")
 
@@ -130,6 +161,14 @@ def main():
     st.title("AI Real-time GYM Coach")
     st.markdown("#### Real-time pose detection with proactive AI voice coaching")
 
+    if st.session_state.get("audio_to_play"):
+        autoplay_audio(st.session_state.audio_to_play)
+
+    if st.session_state.get("coach_feedback"):
+        st.markdown("")
+        st.success(f"🤖 **Coach:** {st.session_state.coach_feedback}")
+
+
     if not workout_started:
          st.markdown(
             """
@@ -173,6 +212,42 @@ def main():
             st.rerun()
         inject_webrtc_styles()
 
+    st.divider()
+
     st.markdown("#### Workout History")
+
+    user_id = st.session_state.get("user_id",0)
+
+    if isinstance(user_id,int):
+        history_rows = get_users_exercises(user_id)
+
+        df_arr = [
+            {
+                "Exercise": row["exercise_name"],
+                "Reps": row["reps"],
+                "Sets": row["sets"],
+                "Time (sec)": row["time"],
+                "Date": row["created_at"]
+            }
+            for row in history_rows
+        ]
+
+        df = pd.DataFrame(df_arr)
+
+        if not df.empty:
+            df["Date"] = pd.to_datetime(df["Date"]).dt.date
+            agg_df = df.groupby(["Exercise", "Date"]).agg(
+                {
+                    'Reps': 'sum',
+                    "Sets": 'sum',
+                    "Time (sec)": 'sum'
+                }
+            ).reset_index()
+            agg_df.index += 1
+            st.table(agg_df, border="horizontal")
+        else:
+            st.info("No workout history found.")
+
+
 if __name__ == "__main__":
     main()
