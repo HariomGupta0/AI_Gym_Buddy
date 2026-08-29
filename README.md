@@ -1,6 +1,6 @@
-# 🏋️‍♂️ Apna AI Gym Coach: Real-Time Pose Detection & AI Voice Coach
+# 🏋️‍♂️ GymGuru AI: Real-Time Pose Detection & AI Voice Coach
 
-Apna AI Gym Coach is a web-based, real-time fitness companion built with **Python**, **MediaPipe**, **Streamlit-WebRTC**, and **Groq LLM**. It utilizes computer vision to analyze your workouts through your webcam, counts your reps and sets, checks your exercise posture/form, and provides proactive voice corrections in real-time.
+GymGuru AI is a web-based, real-time fitness companion built with **Python**, **MediaPipe**, **Streamlit-WebRTC**, and **Groq LLM**. It utilizes computer vision to analyze your workouts through your webcam, counts your reps and sets, checks your exercise posture/form, and provides proactive voice corrections in real-time.
 
 ---
 
@@ -12,7 +12,7 @@ Apna AI Gym Coach is a web-based, real-time fitness companion built with **Pytho
 <!-- REPLACE THIS LINE WITH YOUR DEMO VIDEO/IMAGE LINK -->
 ```
                    [ PLACE YOUR DEMO VIDEO / IMAGE HERE ]
-    (e.g., <img src="demo.gif" width="700" alt="Apna AI Gym Coach Demo">)
+    (e.g., <img src="demo.gif" width="700" alt="GymGuru AI Demo">)
 ```
 
 ---
