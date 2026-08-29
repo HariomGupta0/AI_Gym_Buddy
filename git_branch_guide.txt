@@ -1,0 +1,55 @@
+GIT BRANCH & EXPERIMENTATION GUIDE
+==================================
+
+Use this guide to safely experiment with new features in your project without breaking your working code.
+
+1. START AN EXPERIMENT
+----------------------
+Create a new branch and switch to it:
+  git checkout -b <branch-name>
+  
+  Example:
+  git checkout -b experiment-voice-prompt
+
+Verify you are on the new branch:
+  git branch
+  (You should see an asterisk * next to your branch name)
+
+2. SAVE PROGRESS ON YOUR EXPERIMENT
+-----------------------------------
+Make your changes, then stage and commit them on your branch:
+  git add .
+  git commit -m "your commit message"
+
+3. MERGE SUCCESSFUL EXPERIMENTS
+-------------------------------
+If your experiment works and you want to keep the changes in your main codebase:
+  
+  # Switch back to main
+  git checkout main
+  
+  # Merge your experiment branch
+  git merge <branch-name>
+  
+  # Push changes to GitHub
+  git push origin main
+
+4. DISCARD FAILED EXPERIMENTS
+-----------------------------
+If your experiment fails or you want to throw away your changes and start over:
+  
+  # Switch back to main (any uncommitted changes in the branch will be lost if you discard them)
+  git checkout main
+  
+  # Delete the experimental branch
+  git branch -D <branch-name>
+
+5. UNDOING UNCOMMITTED WORK
+---------------------------
+If you made edits but haven't committed them, and want to discard them:
+  
+  # Discard changes in a single file:
+  git restore path/to/file.py
+  
+  # Discard all changes in the project:
+  git restore .
