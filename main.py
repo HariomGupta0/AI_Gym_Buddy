@@ -79,9 +79,6 @@ def main():
                 st.session_state.workout_started = True
                 st.session_state.set_cycle_started_at = time.time()
                 st.session_state.last_saved_sets_completed = 0
-                st.session_state.last_notified_sets_completed = 0
-                st.session_state.last_notified_workout_complete = False
-                st.rerun()
 
                 if st.session_state.voice_pipeline:
                     result = st.session_state.voice_pipeline.process_event(
