@@ -1,4 +1,4 @@
-# 🏋️‍♂️ Apna AI Gym Coach: Real-Time Pose Detection & AI Voice Coach
+# 🏋️‍♂️AI Gym Coach: Real-Time Pose Detection & AI Voice Coach
 
 Apna AI Gym Coach is a web-based, real-time fitness companion built with **Python**, **MediaPipe**, **Streamlit-WebRTC**, and **Groq LLM**. It utilizes computer vision to analyze your workouts through your webcam, counts your reps and sets, checks your exercise posture/form, and provides proactive voice corrections in real-time.
 
