@@ -44,10 +44,12 @@ METRICS_FIELDS = {
     "Planks": {
         "body_alignment": "N/A",
         "hip_status": "N/A",
+        "body_angle": 180,
     },
     "Jumping Jacks": {
         "jack_status": "N/A",
         "arm_extension": "N/A",
+        "stance_ratio": 1.0,
     },
 }
 

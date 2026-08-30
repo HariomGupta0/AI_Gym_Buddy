@@ -95,5 +95,6 @@ class PlankDetector(BaseExercise):
             "reps": self.reps,  # Reps count acts as total active hold seconds
             "body_alignment": body_alignment,
             "hip_status": hip_status,
+            "body_angle": int(body_angle),
             "stage": self.stage
         }

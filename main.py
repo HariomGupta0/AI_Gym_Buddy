@@ -211,6 +211,18 @@ def main():
                 st.metric("Torso Angle", f"{st.session_state.torso_angle}°")
                 st.metric("Balance Status", st.session_state.balance_status)
 
+            elif exercise == "Planks":
+                st.subheader("Plank Metrics")
+                st.metric("Body Angle", f"{st.session_state.body_angle}°")
+                st.metric("Body Alignment", st.session_state.body_alignment)
+                st.metric("Hip Position", st.session_state.hip_status)
+
+            elif exercise == "Jumping Jacks":
+                st.subheader("Jumping Jacks Metrics")
+                st.metric("Stance Ratio", f"{st.session_state.stance_ratio}")
+                st.metric("Stance Status", st.session_state.jack_status)
+                st.metric("Arm Extension", st.session_state.arm_extension)
+
     st.title("AI Real-time GYM Coach")
     st.markdown("#### Real-time pose detection with proactive AI voice coaching")
 

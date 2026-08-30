@@ -92,5 +92,6 @@ class JumpingJacksDetector(BaseExercise):
             "reps": self.reps,
             "jack_status": jack_status,
             "arm_extension": arm_extension,
+            "stance_ratio": round(stance_ratio, 2),
             "stage": self.stage
         }
