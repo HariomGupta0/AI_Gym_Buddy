@@ -76,17 +76,62 @@ def sync_metrics_update(context):
         st.session_state.last_saved_sets_completed = sets_completed
         
     if workout_completed and st.session_state.get("workout_started"):
-        st.session_state.workout_started = False
+        if st.session_state.get("circuit_mode", False):
+            idx = st.session_state.get("circuit_index", 0)
+            exercises = st.session_state.get("circuit_queue", [])
+            targets = st.session_state.get("circuit_targets", {})
+            
+            if idx + 1 < len(exercises):
+                next_idx = idx + 1
+                next_ex = exercises[next_idx]
+                st.session_state.circuit_index = next_idx
+                st.session_state.exercise_type = next_ex
+                st.session_state.target_sets = int(targets[next_ex]["sets"])
+                st.session_state.reps_per_set = int(targets[next_ex]["reps"])
+                
+                # Reset workout states for next exercise
+                st.session_state.reps = 0
+                st.session_state.sets_completed = 0
+                st.session_state.current_set_reps = 0
+                st.session_state.last_saved_sets_completed = 0
+                st.session_state.set_cycle_started_at = time.time()
+                
+                # Reset the processor exercise type and local detector
+                processor.set_exercise(next_ex)
+                if hasattr(processor, "_detectors"):
+                    detector = processor._detectors.get(next_ex)
+                    if detector:
+                        detector.reset()
 
-        if st.session_state.get("voice_pipeline"):
-            result = st.session_state.voice_pipeline.process_event(
-                event="workout_completed",
-                exercise=exercise,
-                metrics=latest_metrics,
-            )
-
-            if result:
-                st.session_state.audio_to_play, st.session_state.coach_feedback = result
+                # Trigger transition voice prompt
+                if st.session_state.get("voice_pipeline"):
+                    result = st.session_state.voice_pipeline.process_event(
+                        event="circuit_transition",
+                        exercise=next_ex,
+                        metrics={}
+                    )
+                    if result:
+                        st.session_state.audio_to_play, st.session_state.coach_feedback = result
+            else:
+                st.session_state.workout_started = False
+                if st.session_state.get("voice_pipeline"):
+                    result = st.session_state.voice_pipeline.process_event(
+                        event="workout_completed",
+                        exercise=exercise,
+                        metrics=latest_metrics,
+                    )
+                    if result:
+                        st.session_state.audio_to_play, st.session_state.coach_feedback = result
+        else:
+            st.session_state.workout_started = False
+            if st.session_state.get("voice_pipeline"):
+                result = st.session_state.voice_pipeline.process_event(
+                    event="workout_completed",
+                    exercise=exercise,
+                    metrics=latest_metrics,
+                )
+                if result:
+                    st.session_state.audio_to_play, st.session_state.coach_feedback = result
                 
     pose_detected = latest_metrics.get("pose_detected", True)
     

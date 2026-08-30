@@ -4,6 +4,8 @@ EXERCISE_OPTION= [
     "Biceps Curls (Dumbbell)",
     "Shoulder Press",
     "Lunges",
+    "Planks",
+    "Jumping Jacks",
 ]
 
 POSE_CONNECTIONS = [
@@ -38,6 +40,14 @@ METRICS_FIELDS = {
         "front_knee_angle": 0,
         "torso_angle": 0,
         "balance_status": "N/A",
+    },
+    "Planks": {
+        "body_alignment": "N/A",
+        "hip_status": "N/A",
+    },
+    "Jumping Jacks": {
+        "jack_status": "N/A",
+        "arm_extension": "N/A",
     },
 }
 

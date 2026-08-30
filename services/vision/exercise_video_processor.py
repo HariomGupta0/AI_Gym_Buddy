@@ -12,6 +12,8 @@ from detectors.pushup import PushUpDetector
 from detectors.biceps_curls import BicepsCurlDetector
 from detectors.shoulder_press import ShoulderPressDetector
 from detectors.lunges import LungesDetector
+from detectors.plank import PlankDetector
+from detectors.jumping_jacks import JumpingJacksDetector
 from services.config.workout_config import POSE_CONNECTIONS
 
 
@@ -41,6 +43,8 @@ class VideoProcessorClass(VideoProcessorBase):
             "Biceps Curls (Dumbbell)": BicepsCurlDetector(),
             "Shoulder Press": ShoulderPressDetector(),
             "Lunges": LungesDetector(),
+            "Planks": PlankDetector(),
+            "Jumping Jacks": JumpingJacksDetector(),
         }
 
         self._frame_timestamps_ms = 0
@@ -61,19 +65,93 @@ class VideoProcessorClass(VideoProcessorBase):
         with self._lock:
             return self._exercise_type
         
-    def _draw_skeleton(self, img, landmarks):
+    def _draw_skeleton(self, img, landmarks, metrics, ex_type):
         h, w = img.shape[:2]
+
+        default_color = (0, 255, 0)  # Green (BGR)
+        error_color = (0, 0, 255)    # Red (BGR)
+
+        torso_connections = {(11, 23), (12, 24), (23, 24)}
+        leg_connections = {
+            (23, 25), (24, 26), (25, 27), (26, 28),
+            (27, 29), (28, 30), (29, 31), (30, 32), (27, 31), (28, 32)
+        }
+        arm_connections = {(11, 13), (12, 14), (13, 15), (14, 16)}
+
+        torso_color = default_color
+        leg_color = default_color
+        arm_color = default_color
+
+        if metrics:
+            if ex_type == "Squats":
+                depth = metrics.get("depth_status", "")
+                back = metrics.get("back_angle", 180)
+                if depth == "TOO HIGH":
+                    leg_color = error_color
+                if isinstance(back, (int, float)) and back < 130:
+                    torso_color = error_color
+                    
+            elif ex_type == "Push-ups":
+                alignment = metrics.get("body_alignment", "")
+                hip = metrics.get("hip_status", "")
+                if alignment == "Poor Form":
+                    torso_color = error_color
+                    leg_color = error_color
+                if hip in ["SAGGING", "PIKED UP"]:
+                    torso_color = error_color
+                    
+            elif ex_type == "Biceps Curls (Dumbbell)":
+                shoulder = metrics.get("shoulder_status", "")
+                swing = metrics.get("swing_status", "")
+                if shoulder == "ELBOW DRIFTING" or swing == "SWING DETECTED":
+                    arm_color = error_color
+                    
+            elif ex_type == "Shoulder Press":
+                back_arch = metrics.get("back_arch_status", "")
+                if back_arch == "Excessive Arch":
+                    torso_color = error_color
+                    
+            elif ex_type == "Lunges":
+                balance = metrics.get("balance_status", "")
+                if balance == "OFF BALANCE":
+                    leg_color = error_color
+                    torso_color = error_color
+                    
+            elif ex_type == "Planks":
+                alignment = metrics.get("body_alignment", "")
+                hip = metrics.get("hip_status", "")
+                if alignment == "Poor Form" or hip in ["SAGGING", "PIKED UP"]:
+                    torso_color = error_color
+                    leg_color = error_color
+                    
+            elif ex_type == "Jumping Jacks":
+                jack = metrics.get("jack_status", "")
+                arms = metrics.get("arm_extension", "")
+                if jack == "LEGS TOO CLOSE":
+                    leg_color = error_color
+                if arms == "ARMS TOO LOW":
+                    arm_color = error_color
 
         for start_idx, end_idx in POSE_CONNECTIONS:
             p1 = landmarks[start_idx]
             p2 = landmarks[end_idx]
 
             if p1.visibility > 0.7 and p2.visibility > 0.7:
+                conn = (start_idx, end_idx)
+                if conn in torso_connections:
+                    color = torso_color
+                elif conn in leg_connections:
+                    color = leg_color
+                elif conn in arm_connections:
+                    color = arm_color
+                else:
+                    color = default_color
+
                 cv2.line(
                     img,
                     (int(p1.x * w), int(p1.y * h)),
                     (int(p2.x * w), int(p2.y * h)),
-                    (0, 255, 0),
+                    color,
                     8
                 )
         
@@ -121,6 +199,10 @@ class VideoProcessorClass(VideoProcessorBase):
             self._draw_press_overlays(img, metrics)
         elif ex_type == "Lunges":
             self._draw_lunge_overlays(img, metrics)
+        elif ex_type == "Planks":
+            self._draw_plank_overlays(img, metrics)
+        elif ex_type == "Jumping Jacks":
+            self._draw_jumping_jacks_overlays(img, metrics)
 
 
     def _draw_squats_overlays(self, img, metrics):
@@ -188,6 +270,32 @@ class VideoProcessorClass(VideoProcessorBase):
             2,
         )
 
+    def _draw_plank_overlays(self, img, metrics):
+        h, _ = img.shape[:2]
+
+        cv2.putText(
+            img,
+            f"ALIGN: {metrics['body_alignment']} | HIP: {metrics['hip_status']}",
+            (20, h - 20),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 255, 0),
+            2,
+        )
+
+    def _draw_jumping_jacks_overlays(self, img, metrics):
+        h, _ = img.shape[:2]
+
+        cv2.putText(
+            img,
+            f"STANCE: {metrics['jack_status']} | ARMS: {metrics['arm_extension']}",
+            (20, h - 20),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 255, 0),
+            2,
+        )
+
     def recv(self, frame):
         image = np.asarray(
             cv2.flip(frame.to_ndarray(format="bgr24"), 1),
@@ -204,19 +312,18 @@ class VideoProcessorClass(VideoProcessorBase):
 
         if result.pose_landmarks:
             landmarks = result.pose_landmarks[0]
-
-            self._draw_skeleton(image, landmarks)
-
             ex_type = self.get_exercise()
-
             detector = self._detectors.get(ex_type)
 
+            metrics = {}
             if detector:
                 metrics = detector.process(landmarks)
-
-                self._draw_overlays(image, metrics, ex_type)
-
                 self.set_latest_metrics(metrics)
+
+            self._draw_skeleton(image, landmarks, metrics, ex_type)
+
+            if detector:
+                self._draw_overlays(image, metrics, ex_type)
         else:
             self._draw_no_pose_warnings(image)
 

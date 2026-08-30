@@ -15,9 +15,8 @@
    TYPOGRAPHY (SCOPED – safer)
 ========================================================= */
 
-.block-container,
-.block-container * {
-  font-family: 'AdobeClean', sans-serif !important;
+.block-container {
+  font-family: 'AdobeClean', sans-serif;
 }
 
 /* =========================================================

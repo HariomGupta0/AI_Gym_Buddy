@@ -65,25 +65,55 @@ def main():
         if st.session_state.username:
             st.caption(f"🗽 Login as {st.session_state.username}") 
 
+        st.toggle("🔇 Mute Voice Coach", value=False, key="mute_audio")
+
         st.divider()
 
         st.subheader("Workout Plan")
 
         if not workout_started:
-            plan_exercise = st.selectbox("Exercise",options= EXERCISE_OPTION, key="plan_exercise")
+            workout_mode = st.radio("Workout Mode", ["Single Exercise", "Circuit Mode"], index=0, key="workout_mode")
 
-            plan_sets = st.number_input("Sets", min_value=0, max_value= 50, key ="plan_sets", step=1)
-
-            plan_reps = st.number_input("Reps per Set",min_value=0, max_value=50, key="plan_reps" )
+            if workout_mode == "Single Exercise":
+                plan_exercise = st.selectbox("Exercise", options=EXERCISE_OPTION, key="plan_exercise")
+                plan_sets = st.number_input("Sets", min_value=1, max_value=50, value=3, key="plan_sets", step=1)
+                plan_reps = st.number_input("Reps per Set", min_value=1, max_value=50, value=10, key="plan_reps", step=1)
+            else:
+                circuit_exercises = st.multiselect("Select Exercises in Order", options=EXERCISE_OPTION, key="circuit_exercises")
+                
+                circuit_targets = {}
+                for ex in circuit_exercises:
+                    st.markdown(f"**Target for {ex}:**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        s = st.number_input(f"Sets ({ex})", min_value=1, max_value=10, value=1, key=f"sets_{ex}", step=1)
+                    with col2:
+                        r = st.number_input(f"Reps ({ex})", min_value=1, max_value=50, value=10, key=f"reps_{ex}", step=1)
+                    circuit_targets[ex] = {"sets": s, "reps": r}
 
             st.markdown("")
-
             start_session_button = st.button("Start Session", width="stretch", key="start_session_button")
 
             if start_session_button:
-                st.session_state.exercise_type = plan_exercise
-                st.session_state.target_sets = int(plan_sets)
-                st.session_state.reps_per_set = int(plan_reps)
+                if workout_mode == "Single Exercise":
+                    st.session_state.circuit_mode = False
+                    st.session_state.exercise_type = plan_exercise
+                    st.session_state.target_sets = int(plan_sets)
+                    st.session_state.reps_per_set = int(plan_reps)
+                else:
+                    if not circuit_exercises:
+                        st.sidebar.error("Please select at least one exercise for the circuit!")
+                        st.stop()
+                    st.session_state.circuit_mode = True
+                    st.session_state.circuit_queue = circuit_exercises
+                    st.session_state.circuit_targets = circuit_targets
+                    st.session_state.circuit_index = 0
+                    
+                    first_ex = circuit_exercises[0]
+                    st.session_state.exercise_type = first_ex
+                    st.session_state.target_sets = int(circuit_targets[first_ex]["sets"])
+                    st.session_state.reps_per_set = int(circuit_targets[first_ex]["reps"])
+
                 st.session_state.reps = 0
                 st.session_state.workout_started = True
                 st.session_state.set_cycle_started_at = time.time()
@@ -92,7 +122,7 @@ def main():
                 if st.session_state.voice_pipeline:
                     result = st.session_state.voice_pipeline.process_event(
                         event="workout_started",
-                        exercise=plan_exercise,
+                        exercise=st.session_state.exercise_type,
                         metrics={}
                     )
                     
@@ -104,13 +134,30 @@ def main():
                 st.rerun()
             
         else:
-            exercise = st.session_state.get("plan_exercise")
-            sets = st.session_state.get("plan_sets")
-            reps = st.session_state.get("plan_reps")
+            exercise = st.session_state.get("exercise_type")
+            sets = st.session_state.get("target_sets")
+            reps = st.session_state.get("reps_per_set")
 
-            st.info(f"**{exercise}** -- {sets} Sets/ {reps} Reps ")
+            st.info(f"**{exercise}** -- {sets} Sets / {reps} Reps")
 
-            end_session_button = st.button("End Workout", key= "end_session_button", width="stretch")
+            if st.session_state.get("circuit_mode", False):
+                st.markdown("**Circuit Queue:**")
+                idx = st.session_state.get("circuit_index", 0)
+                exercises = st.session_state.get("circuit_queue", [])
+                targets = st.session_state.get("circuit_targets", {})
+                
+                for i, ex in enumerate(exercises):
+                    ex_sets = targets[ex]["sets"]
+                    ex_reps = targets[ex]["reps"]
+                    if i < idx:
+                        st.markdown(f"~~{i+1}. {ex} ({ex_sets}x{ex_reps})~~ ✅")
+                    elif i == idx:
+                        st.markdown(f"👉 **{i+1}. {ex} ({ex_sets}x{ex_reps})**")
+                    else:
+                        st.markdown(f"{i+1}. {ex} ({ex_sets}x{ex_reps})")
+
+            st.markdown("")
+            end_session_button = st.button("End Workout", key="end_session_button", width="stretch")
 
             if end_session_button:
                 st.session_state["workout_started"] = False
@@ -124,7 +171,7 @@ def main():
             current_set_reps = st.session_state.get("current_set_reps")
             reps_per_set = st.session_state.get("reps_per_set")
             sets_completed = st.session_state.get("sets_completed")
-            target_sets = st.session_state.get("plan_sets")
+            target_sets = st.session_state.get("target_sets")
 
             st.subheader("Progress")
 
@@ -167,7 +214,7 @@ def main():
     st.title("AI Real-time GYM Coach")
     st.markdown("#### Real-time pose detection with proactive AI voice coaching")
 
-    if st.session_state.get("audio_to_play"):
+    if st.session_state.get("audio_to_play") and not st.session_state.get("mute_audio", False):
         autoplay_audio(st.session_state.audio_to_play)
 
     if st.session_state.get("coach_feedback"):
@@ -242,15 +289,55 @@ def main():
 
         if not df.empty:
             df["Date"] = pd.to_datetime(df["Date"]).dt.date
-            agg_df = df.groupby(["Exercise", "Date"]).agg(
-                {
-                    'Reps': 'sum',
-                    "Sets": 'sum',
-                    "Time (sec)": 'sum'
-                }
-            ).reset_index()
-            agg_df.index += 1
-            st.table(agg_df, border="horizontal")
+            
+            # 1. KPI Metric Cards
+            total_reps = df["Reps"].sum()
+            total_sets = df["Sets"].sum()
+            total_seconds = df["Time (sec)"].sum()
+            
+            # Format time into HH:MM:SS
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            seconds = int(total_seconds % 60)
+            time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Reps", f"{total_reps} 🏋️")
+            with col2:
+                st.metric("Total Sets", f"{total_sets} 🔢")
+            with col3:
+                st.metric("Active Time", f"{time_str} ⏱️")
+                
+            st.markdown("")
+            
+            # 2. Interactive Charts
+            chart_col1, chart_col2 = st.columns(2)
+            
+            with chart_col1:
+                st.markdown("##### Exercise Volume (Reps)")
+                volume_df = df.groupby("Exercise")["Reps"].sum().reset_index()
+                st.bar_chart(data=volume_df, x="Exercise", y="Reps")
+                
+            with chart_col2:
+                st.markdown("##### Daily Activity Trend")
+                trend_df = df.groupby("Date")["Reps"].sum().reset_index()
+                trend_df = trend_df.sort_values("Date")
+                st.line_chart(data=trend_df, x="Date", y="Reps")
+                
+            st.markdown("")
+            
+            # 3. Collapsible Detailed Workout Logs
+            with st.expander("📄 Show Detailed Workout Logs"):
+                agg_df = df.groupby(["Exercise", "Date"]).agg(
+                    {
+                        'Reps': 'sum',
+                        "Sets": 'sum',
+                        "Time (sec)": 'sum'
+                    }
+                ).reset_index()
+                agg_df.index += 1
+                st.table(agg_df, border="horizontal")
         else:
             st.info("No workout history found.")
 

@@ -61,6 +61,29 @@ class VoicePipeline:
             if balance == "OFF BALANCE":
                 return "The user is losing balance during the lunge — feet should be hip-width apart."
 
+        elif exercise == "Planks":
+            alignment = metrics.get("body_alignment", "")
+            hip_status = metrics.get("hip_status", "")
+            
+            if alignment == "Poor Form":
+                return "The user's body is not straight during the plank — keep it in a straight line."
+
+            if hip_status == "SAGGING":
+                return "The user's hips are sagging down during the plank — pull them up slightly."
+
+            if hip_status == "PIKED UP":
+                return "The user's hips are too high — lower them to form a straight line."
+
+        elif exercise == "Jumping Jacks":
+            jack_status = metrics.get("jack_status", "")
+            arm_extension = metrics.get("arm_extension", "")
+            
+            if jack_status == "LEGS TOO CLOSE":
+                return "The user's feet are too close together — tell them to jump and spread feet wider."
+
+            if arm_extension == "ARMS TOO LOW":
+                return "The user's arms are not raised high enough — tell them to raise hands above their shoulders."
+
         return None
 
     def process_event(self, event, exercise, metrics):
@@ -68,7 +91,7 @@ class VoicePipeline:
 
         now = time.time()
 
-        is_major_issue = event in ["workout_started", "set_completed", "workout_completed"]
+        is_major_issue = event in ["workout_started", "set_completed", "workout_completed", "circuit_transition"]
 
         if not is_major_issue:
             if not issue:
@@ -78,7 +101,10 @@ class VoicePipeline:
                 return None
             
         text = self.llm.give_feedback(event, issue)
-        voice = self.tts.speak(text)
+        
+        voice = None
+        if not st.session_state.get("mute_audio", False):
+            voice = self.tts.speak(text)
 
         self.last_spoken_at = now
 
